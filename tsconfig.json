@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "checkJs": false,
+        "resolveJsonModule": true,
+        "sourceMap": true,
+        "esModuleInterop": true,
+        "noImplicitAny": false,
+        "alwaysStrict": true,
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "baseUrl": ".",
+        "skipLibCheck": false,
+        "pretty": false,
+        "removeComments": true,
+        "strict": true,
+        "target": "esnext",
+        "typeRoots" : [
+            "node_modules/@types"
+        ]
+    },
+    "include": [
+        "./src/**/*"
+    ]
+}
