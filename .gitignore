@@ -1,0 +1,9 @@
+yarn-error.log
+yarn.lock
+*.swp
+.cache
+.parcel-cache
+dist/
+node_modules/
+.backup/
+.vscode/

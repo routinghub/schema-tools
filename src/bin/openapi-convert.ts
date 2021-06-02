@@ -1831,10 +1831,7 @@ function requestToExcel(outFileName: string)
 
 function main()
 {
-    //requestToExcel('naquel-request.xlsx');
-    //return;
-    
-    const OUT_FLATTENED_DOC_PATH = path.resolve(__dirname, '../routing.flattened.xlsx');
+    const OUT_FLATTENED_DOC_PATH = path.resolve(__dirname, '../../routing.flattened.xlsx');
     const OUT_ROUTING_FLATTENED_SCHEMA_PATH = path.resolve(__dirname, '../routing.flattened.json');
 
     // reference schema can be generated as:
@@ -1875,7 +1872,7 @@ function main()
     //       redoc supports only OAS v3, which uses JSON Schema Draft 5,
     //       and need to wait until ReDoc support OAS v3.1, which uses Draft 2019-09
     //       @see https://github.com/Redocly/redoc/issues/1379
-
+    //
     $RefParser.dereference(ROUTING_SCHEMA).then(openapi_schema =>
     {
         // build entities documentation sheets
@@ -2000,6 +1997,8 @@ function main()
             console.log(`Adding '${schema.doc_sheet_name}' documentation sheet...`);
             formatter.addDocumentationSheet(wb, schema.schema!, schema.doc_sheet_name, schema.key);
         })
+
+        console.log(`Writing example Excel to ${OUT_FLATTENED_DOC_PATH}...`);
 
         wb.xlsx.writeFile(OUT_FLATTENED_DOC_PATH, {
             useStyles: true,

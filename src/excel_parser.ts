@@ -1,10 +1,12 @@
 import { Keys, Field, ExcelSchema } from './schema';
 import * as JsonSchema from './json_schema_converter';
+
 import * as FLAT_ROUTING_SCHEMA from './routing.flattened.json';
+
+import * as dt from './lib/datetime';
 
 import * as Excel from 'exceljs';
 import { DateTime, Duration } from 'luxon';
-import * as dt from '../lib/datetime';
 
 function getFlattenedRoutingSchema(): ExcelSchema
 {
@@ -16,20 +18,11 @@ function getFlattenedRoutingSchema(): ExcelSchema
 //
 // @returns Promise that resolves to parsed Excel worksheet
 //
-export function loadExcel(buffer: Excel.Buffer): Promise<ParseResult>
+export async function loadExcel(buffer: Excel.Buffer): Promise<ParseResult>
 {
-    return new Promise<any>((resolve, reject) => {
-        const wb = new Excel.Workbook();
-
-        wb.xlsx.load(buffer)
-            .then((workbook: Excel.Workbook) => {
-                const result = parseExcel(workbook);
-                resolve(result);
-            })
-            .catch((reason: any) => {
-                reject(reason);
-            })
-    });
+    const wb = new Excel.Workbook();
+    const workbook: Excel.Workbook = await wb.xlsx.load(buffer);
+    return parseExcel(workbook);
 }
 
 export interface ParseError
@@ -324,7 +317,7 @@ export function parseExcel(wb: Excel.Workbook): ParseResult
         result.matrix[key]!
             .map(row => {
                 const record: Record<string, any> = {};
-                for (let [path, col]: [string, number] of hintsIndexes) {
+                for (const [path, col] of hintsIndexes) {
                     const value = row[col - 1]; // column index is 1-based
                     setByPath(record, path.split('.'), value);
                 }

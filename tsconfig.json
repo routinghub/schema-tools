@@ -17,7 +17,11 @@
         "target": "esnext",
         "typeRoots" : [
             "node_modules/@types"
-        ]
+        ],
+        "paths": {
+            "/*": ["./src/*"]
+        },
+         
     },
     "include": [
         "./src/**/*"

@@ -1,4 +1,3 @@
-import { JSONParserError } from '@apidevtools/json-schema-ref-parser';
 import { JSONSchema4, JSONSchema4TypeName } from 'json-schema';
 import { Field } from './schema';
 

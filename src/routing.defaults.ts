@@ -31,6 +31,16 @@ export type Capacity = {
     weight: number;
 };
 
+export type CompositeCostMatrix = {
+    dimensions: ("distance_duration" | "distance_duration_energy");
+    type: ("composite") | null;
+    value: CompositeCostMatrixItem[] | null;
+    metadata: {
+    };
+};
+
+export type CompositeCostMatrixItem = GcsCostMatrixReference | UrlCostMatrixReference | JsonTimePointCostMatrix | null;
+
 export type Constraints = {
     balanced_shifts: BalancedShiftsDictionary | null;
     employed_vehicles_limit: EmployedVehiclesLimit | null;
@@ -38,12 +48,7 @@ export type Constraints = {
     same_route_sites: SameRouteSitesDictionary | null;
 };
 
-export type CostMatrix = OsrmCostMatrix | HereCostMatrix | ZeroCostMatrix | GcsCostMatrix | StraightLineCostMatrix | UrlCostMatrix | JsonCostMatrix | null;
-
-export type CostMatrixTimeInterval = {
-    end: string | null;
-    start: string | null;
-};
+export type CostMatrix = HereCostMatrix | OsrmCostMatrix | GcsCostMatrixReference | UrlCostMatrixReference | JsonCostMatrix | ZeroCostMatrix | StraightLineCostMatrix | CompositeCostMatrix | null;
 
 export type DelayedStartCosts = {
     per_hour: number;
@@ -51,23 +56,34 @@ export type DelayedStartCosts = {
 
 export type Depot = {
     delayed_start_costs: DelayedStartCosts | null;
-    duration: number;
+    duration: number | null;
     location: GeographicLocation | null;
     throughput: DepotThroughput | null;
+    throughput_violation_costs: ThroughputViolationCosts | null;
     time_window: TimeWindow | null;
     untimely_operations_costs: UntimelyOperationsCosts | null;
 };
 
-export type DepotThroughput = KilogramsPerHour | ItemsPerHour | null;
+export type DepotThroughput = TimeConstantDepotThroughput | TimeVariableDepotThroughput | null;
 
 export type DepotsDictionary = {[id: string] : Depot};
+
+export type DistanceLimitFailureCosts = {
+    per_event: number;
+    per_m: number;
+};
 
 export type EmployedVehiclesLimit = {
     failure_costs: VehiclesLimitFailureCosts | null;
     min: number | null;
 };
 
-export type GcsCostMatrix = {
+export type EnergyLimitFailureCosts = {
+    per_event: number;
+    per_kwh: number;
+};
+
+export type GcsCostMatrixReference = {
     bucket: string | null;
     dimensions: ("distance_duration" | "distance_duration_energy");
     object: string | null;
@@ -80,21 +96,33 @@ export type GeographicLocation = {
 };
 
 export type HereCostMatrix = {
+    time_points: string[] | null;
     type: ("here") | null;
-};
-
-export type ItemsPerHour = {
-    items: number | null;
+    vehicle_type: ("light" | "heavy");
 };
 
 export type JsonCostMatrix = {
     dimensions: ("distance_duration" | "distance_duration_energy");
     type: ("json") | null;
-    value: TimeIndependentCostMatrix | TimeDependentCostMatrix[] | null;
+    value: JsonCostMatrixValue | null;
+    metadata: {
+    };
 };
 
-export type KilogramsPerHour = {
-    kilograms: number | null;
+export type JsonCostMatrixValue = {
+    distances: RowMajorMatrix | null;
+    durations: RowMajorMatrix | null;
+    energy: RowMajorMatrixWithNegatives | null;
+    fallback_cells: MatrixCoordinates | null;
+};
+
+export type JsonTimePointCostMatrix = {
+    dimensions: ("distance_duration" | "distance_duration_energy");
+    time_point: string | null;
+    type: ("json_time_point") | null;
+    value: JsonCostMatrixValue | null;
+    metadata: {
+    };
 };
 
 export type LateOperationsCosts = {
@@ -105,11 +133,11 @@ export type LateOperationsCosts = {
 export type Load = {
     categories: string[] | null;
     count: number | null;
-    volume: number;
-    weight: number;
+    volume: number | null;
+    weight: number | null;
 };
 
-export type MatrixCoordinates = number[][];
+export type MatrixCoordinates = integer[][];
 
 export type MinimiumLoad = {
     count: number | null;
@@ -140,6 +168,8 @@ export type OsrmCostMatrix = {
 
 export type RowMajorMatrix = number[][];
 
+export type RowMajorMatrixWithNegatives = number[][];
+
 export type SameRoute = {
     failure_costs: {
         per_site: number;
@@ -150,11 +180,23 @@ export type SameRouteSitesDictionary = {[id: string] : SameRoute};
 
 export type Shift = {
     balance_key: string | null;
-    duration_limit: number;
+    distance_limit: ShiftDistanceLimit | null;
+    duration_limit: number | null;
+    energy_limit: ShiftEnergyLimit | null;
     gap: number | null;
     late_operations_costs: LateOperationsCosts | null;
     stops_limit: ShiftStopsLimit | null;
     time_window: TimeWindow | null;
+};
+
+export type ShiftDistanceLimit = {
+    failure_costs: DistanceLimitFailureCosts | null;
+    max: number | null;
+};
+
+export type ShiftEnergyLimit = {
+    failure_costs: EnergyLimitFailureCosts | null;
+    max: number | null;
 };
 
 export type ShiftStopsLimit = {
@@ -166,7 +208,7 @@ export type ShiftsDictionary = {[id: string] : Shift};
 
 export type Site = {
     deliver_to: string | null;
-    duration: number;
+    duration: number | null;
     job: ("pickup" | "delivery");
     load: Load | null;
     loading_duration: number | null;
@@ -196,20 +238,37 @@ export type StraightLineCostMatrix = {
     type: ("straight_line") | null;
 };
 
-export type TimeDependentCostMatrix = {
-    distances: RowMajorMatrix | null;
-    durations: RowMajorMatrix | null;
-    energy: RowMajorMatrix | null;
-    fallback_cells: MatrixCoordinates | null;
-    interval: CostMatrixTimeInterval | null;
+export type ThroughputItems = {
+    items_per_hour: number | null;
 };
 
-export type TimeIndependentCostMatrix = {
-    distances: RowMajorMatrix | null;
-    durations: RowMajorMatrix | null;
-    energy: RowMajorMatrix | null;
-    fallback_cells: MatrixCoordinates | null;
+export type ThroughputViolationCosts = {
+    per_count: number;
+    per_event: number;
+    per_kg: number;
 };
+
+export type ThroughputWeight = {
+    weight_per_hour: number | null;
+};
+
+export type TimeConstantDepotThroughput = ThroughputItems | ThroughputWeight | null;
+
+export type TimeDependentThroughputItems = {
+    items_per_hour: number | null;
+    time_point: string | null;
+};
+
+export type TimeDependentThroughputWeight = {
+    time_point: string | null;
+    weight_per_hour: number | null;
+};
+
+export type TimeVariableDepotThroughput = TimeVariableThroughputWeightList | TimeVariableThroughputItemsList | null;
+
+export type TimeVariableThroughputItemsList = TimeDependentThroughputItems[];
+
+export type TimeVariableThroughputWeightList = TimeDependentThroughputWeight[];
 
 export type TimeWindow = {
     end: string | null;
@@ -223,7 +282,7 @@ export type UntimelyOperationsCosts = {
     per_late_minute: number;
 };
 
-export type UrlCostMatrix = {
+export type UrlCostMatrixReference = {
     dimensions: ("distance_duration" | "distance_duration_energy");
     type: ("url") | null;
     url: string | null;
@@ -245,8 +304,8 @@ export type VehicleCosts = {
     per_event: number;
     per_hour: number;
     per_km: number;
-    per_kwh: number | null;
-    per_site: number | null;
+    per_kwh: number;
+    per_site: number;
 };
 
 export type VehiclesDictionary = {[id: string] : Vehicle};
@@ -268,9 +327,10 @@ export type RouteOptimizationRequest = {
     sites: SitesDictionary | null;
     depot: {
         delayed_start_costs: DelayedStartCosts | null;
-        duration: number;
+        duration: number | null;
         location: GeographicLocation | null;
         throughput: DepotThroughput | null;
+        throughput_violation_costs: ThroughputViolationCosts | null;
         time_window: TimeWindow | null;
         untimely_operations_costs: UntimelyOperationsCosts | null;
     };
@@ -282,6 +342,7 @@ export type AccumulativeStatistics = {
     objective_value: number | null;
     total_cost: number | null;
     total_cost_and_penalty: number | null;
+    total_depot_throughput_penalty: number | null;
     total_duration: number | null;
     total_idle_duration: number | null;
     total_locality_penalty: number | null;
@@ -306,10 +367,11 @@ export type DepotRouteWaypoint = {
     untimely_arrival_duration: number | null;
     depot: {
         delayed_start_costs: DelayedStartCosts | null;
-        duration: number;
+        duration: number | null;
         id: string | null;
         location: GeographicLocation | null;
         throughput: DepotThroughput | null;
+        throughput_violation_costs: ThroughputViolationCosts | null;
         time_window: TimeWindow | null;
         untimely_operations_costs: UntimelyOperationsCosts | null;
     };
@@ -317,7 +379,9 @@ export type DepotRouteWaypoint = {
 
 export type RouteShift = {
     balance_key: string | null;
-    duration_limit: number;
+    distance_limit: ShiftDistanceLimit | null;
+    duration_limit: number | null;
+    energy_limit: ShiftEnergyLimit | null;
     gap: number | null;
     id: string | null;
     late_operations_costs: LateOperationsCosts | null;
@@ -329,6 +393,7 @@ export type RouteStatistics = {
     objective_value: number | null;
     total_cost: number | null;
     total_cost_and_penalty: number | null;
+    total_depot_throughput_penalty: number | null;
     total_duration: number | null;
     total_idle_duration: number | null;
     total_locality_penalty: number | null;
@@ -366,7 +431,7 @@ export type SiteRouteWaypoint = {
     untimely_arrival_duration: number | null;
     site: {
         deliver_to: string | null;
-        duration: number;
+        duration: number | null;
         id: string | null;
         job: ("pickup" | "delivery");
         load: Load | null;
@@ -386,6 +451,7 @@ export type SolutionStatistics = {
     objective_value: number | null;
     total_cost: number | null;
     total_cost_and_penalty: number | null;
+    total_depot_throughput_penalty: number | null;
     total_duration: number | null;
     total_idle_duration: number | null;
     total_locality_penalty: number | null;
@@ -433,9 +499,10 @@ export type RouteOptimizationSolution = {
     unserved: UnservedSitesDictionary | null;
     depot: {
         delayed_start_costs: DelayedStartCosts | null;
-        duration: number;
+        duration: number | null;
         location: GeographicLocation | null;
         throughput: DepotThroughput | null;
+        throughput_violation_costs: ThroughputViolationCosts | null;
         time_window: TimeWindow | null;
         untimely_operations_costs: UntimelyOperationsCosts | null;
     };
@@ -472,6 +539,16 @@ export const CapacityDefault: Capacity = {
     weight: 51200,
 };
 
+export const CompositeCostMatrixDefault: CompositeCostMatrix = {
+    dimensions: "distance_duration",
+    type: null,
+    value: [],
+    metadata: {
+    },
+};
+
+export const CompositeCostMatrixItemDefault: CompositeCostMatrixItem = null;
+
 export const ConstraintsDefault: Constraints = {
     load_category_restrictions: [],
     balanced_shifts: {},
@@ -487,17 +564,12 @@ export const ConstraintsDefault: Constraints = {
 
 export const CostMatrixDefault: CostMatrix = null;
 
-export const CostMatrixTimeIntervalDefault: CostMatrixTimeInterval = {
-    end: null,
-    start: null,
-};
-
 export const DelayedStartCostsDefault: DelayedStartCosts = {
     per_hour: 15,
 };
 
 export const DepotDefault: Depot = {
-    duration: 600,
+    duration: null,
     delayed_start_costs: {
         per_hour: 15,
     },
@@ -506,6 +578,11 @@ export const DepotDefault: Depot = {
         lng: null,
     },
     throughput: null,
+    throughput_violation_costs: {
+        per_count: 10,
+        per_event: 100,
+        per_kg: 10,
+    },
     time_window: {
         end: null,
         start: null,
@@ -522,6 +599,11 @@ export const DepotThroughputDefault: DepotThroughput = null;
 
 export const DepotsDictionaryDefault: DepotsDictionary = {};
 
+export const DistanceLimitFailureCostsDefault: DistanceLimitFailureCosts = {
+    per_event: 1000,
+    per_m: 10,
+};
+
 export const EmployedVehiclesLimitDefault: EmployedVehiclesLimit = {
     min: null,
     failure_costs: {
@@ -530,7 +612,12 @@ export const EmployedVehiclesLimitDefault: EmployedVehiclesLimit = {
     },
 };
 
-export const GcsCostMatrixDefault: GcsCostMatrix = {
+export const EnergyLimitFailureCostsDefault: EnergyLimitFailureCosts = {
+    per_event: 1000,
+    per_kwh: 100,
+};
+
+export const GcsCostMatrixReferenceDefault: GcsCostMatrixReference = {
     bucket: null,
     dimensions: "distance_duration",
     object: null,
@@ -543,21 +630,43 @@ export const GeographicLocationDefault: GeographicLocation = {
 };
 
 export const HereCostMatrixDefault: HereCostMatrix = {
+    time_points: [],
     type: null,
-};
-
-export const ItemsPerHourDefault: ItemsPerHour = {
-    items: null,
+    vehicle_type: light,
 };
 
 export const JsonCostMatrixDefault: JsonCostMatrix = {
     dimensions: "distance_duration",
     type: null,
-    value: null,
+    metadata: {
+    },
+    value: {
+        distances: [],
+        durations: [],
+        energy: [],
+        fallback_cells: [],
+    },
 };
 
-export const KilogramsPerHourDefault: KilogramsPerHour = {
-    kilograms: null,
+export const JsonCostMatrixValueDefault: JsonCostMatrixValue = {
+    distances: [],
+    durations: [],
+    energy: [],
+    fallback_cells: [],
+};
+
+export const JsonTimePointCostMatrixDefault: JsonTimePointCostMatrix = {
+    dimensions: "distance_duration",
+    time_point: null,
+    type: null,
+    metadata: {
+    },
+    value: {
+        distances: [],
+        durations: [],
+        energy: [],
+        fallback_cells: [],
+    },
 };
 
 export const LateOperationsCostsDefault: LateOperationsCosts = {
@@ -568,8 +677,8 @@ export const LateOperationsCostsDefault: LateOperationsCosts = {
 export const LoadDefault: Load = {
     categories: [],
     count: null,
-    volume: 0.005,
-    weight: 1,
+    volume: null,
+    weight: null,
 };
 
 export const MatrixCoordinatesDefault: MatrixCoordinates = [];
@@ -603,6 +712,8 @@ export const OsrmCostMatrixDefault: OsrmCostMatrix = {
 
 export const RowMajorMatrixDefault: RowMajorMatrix = [];
 
+export const RowMajorMatrixWithNegativesDefault: RowMajorMatrixWithNegatives = [];
+
 export const SameRouteDefault: SameRoute = {
     failure_costs: {
         per_site: 10,
@@ -613,8 +724,22 @@ export const SameRouteSitesDictionaryDefault: SameRouteSitesDictionary = {};
 
 export const ShiftDefault: Shift = {
     balance_key: null,
-    duration_limit: 86400,
+    duration_limit: null,
     gap: null,
+    distance_limit: {
+        max: null,
+        failure_costs: {
+            per_event: 1000,
+            per_m: 10,
+        },
+    },
+    energy_limit: {
+        max: null,
+        failure_costs: {
+            per_event: 1000,
+            per_kwh: 100,
+        },
+    },
     late_operations_costs: {
         per_event: 15,
         per_late_minute: 0.25,
@@ -633,6 +758,22 @@ export const ShiftDefault: Shift = {
     },
 };
 
+export const ShiftDistanceLimitDefault: ShiftDistanceLimit = {
+    max: null,
+    failure_costs: {
+        per_event: 1000,
+        per_m: 10,
+    },
+};
+
+export const ShiftEnergyLimitDefault: ShiftEnergyLimit = {
+    max: null,
+    failure_costs: {
+        per_event: 1000,
+        per_kwh: 100,
+    },
+};
+
 export const ShiftStopsLimitDefault: ShiftStopsLimit = {
     min: null,
     failure_costs: {
@@ -645,18 +786,18 @@ export const ShiftsDictionaryDefault: ShiftsDictionary = {};
 
 export const SiteDefault: Site = {
     deliver_to: null,
-    duration: 600,
+    duration: null,
     job: "delivery",
     loading_duration: null,
     preparing_duration: null,
     required_capabilities: [],
     same_route_key: null,
-    unperformed_cost: 200,
+    unperformed_cost: 100000000,
     load: {
         categories: [],
         count: null,
-        volume: 0.005,
-        weight: 1,
+        volume: null,
+        weight: null,
     },
     location: {
         lat: null,
@@ -702,23 +843,37 @@ export const StraightLineCostMatrixDefault: StraightLineCostMatrix = {
     type: null,
 };
 
-export const TimeDependentCostMatrixDefault: TimeDependentCostMatrix = {
-    distances: [],
-    durations: [],
-    energy: [],
-    fallback_cells: [],
-    interval: {
-        end: null,
-        start: null,
-    },
+export const ThroughputItemsDefault: ThroughputItems = {
+    items_per_hour: null,
 };
 
-export const TimeIndependentCostMatrixDefault: TimeIndependentCostMatrix = {
-    distances: [],
-    durations: [],
-    energy: [],
-    fallback_cells: [],
+export const ThroughputViolationCostsDefault: ThroughputViolationCosts = {
+    per_count: 10,
+    per_event: 100,
+    per_kg: 10,
 };
+
+export const ThroughputWeightDefault: ThroughputWeight = {
+    weight_per_hour: null,
+};
+
+export const TimeConstantDepotThroughputDefault: TimeConstantDepotThroughput = null;
+
+export const TimeDependentThroughputItemsDefault: TimeDependentThroughputItems = {
+    items_per_hour: null,
+    time_point: null,
+};
+
+export const TimeDependentThroughputWeightDefault: TimeDependentThroughputWeight = {
+    time_point: null,
+    weight_per_hour: null,
+};
+
+export const TimeVariableDepotThroughputDefault: TimeVariableDepotThroughput = null;
+
+export const TimeVariableThroughputItemsListDefault: TimeVariableThroughputItemsList = [];
+
+export const TimeVariableThroughputWeightListDefault: TimeVariableThroughputWeightList = [];
 
 export const TimeWindowDefault: TimeWindow = {
     end: null,
@@ -732,7 +887,7 @@ export const UntimelyOperationsCostsDefault: UntimelyOperationsCosts = {
     per_late_minute: 0.25,
 };
 
-export const UrlCostMatrixDefault: UrlCostMatrix = {
+export const UrlCostMatrixReferenceDefault: UrlCostMatrixReference = {
     dimensions: "distance_duration",
     type: null,
     url: null,
@@ -749,11 +904,11 @@ export const VehicleDefault: Vehicle = {
         weight: 51200,
     },
     costs: {
-        per_event: 50,
+        per_event: 1000,
         per_hour: 10,
         per_km: 15,
-        per_kwh: null,
-        per_site: null,
+        per_kwh: 0.1,
+        per_site: 0.1,
         moved_load: null,
     },
     min_load: {
@@ -765,11 +920,11 @@ export const VehicleDefault: Vehicle = {
 };
 
 export const VehicleCostsDefault: VehicleCosts = {
-    per_event: 50,
+    per_event: 1000,
     per_hour: 10,
     per_km: 15,
-    per_kwh: null,
-    per_site: null,
+    per_kwh: 0.1,
+    per_site: 0.1,
     moved_load: null,
 };
 
@@ -798,7 +953,7 @@ export const RouteOptimizationRequestDefault: RouteOptimizationRequest = {
         same_route_sites: {},
     },
     depot: {
-        duration: 600,
+        duration: null,
         delayed_start_costs: {
             per_hour: 15,
         },
@@ -807,6 +962,11 @@ export const RouteOptimizationRequestDefault: RouteOptimizationRequest = {
             lng: null,
         },
         throughput: null,
+        throughput_violation_costs: {
+            per_count: 10,
+            per_event: 100,
+            per_kg: 10,
+        },
         time_window: {
             end: null,
             start: null,
@@ -843,7 +1003,7 @@ export const RequestDefault: Request = {
         same_route_sites: {},
     },
     depot: {
-        duration: 600,
+        duration: null,
         delayed_start_costs: {
             per_hour: 15,
         },
@@ -852,6 +1012,11 @@ export const RequestDefault: Request = {
             lng: null,
         },
         throughput: null,
+        throughput_violation_costs: {
+            per_count: 10,
+            per_event: 100,
+            per_kg: 10,
+        },
         time_window: {
             end: null,
             start: null,
@@ -878,6 +1043,7 @@ export const AccumulativeStatisticsDefault: AccumulativeStatistics = {
     objective_value: null,
     total_cost: null,
     total_cost_and_penalty: null,
+    total_depot_throughput_penalty: null,
     total_duration: null,
     total_idle_duration: null,
     total_locality_penalty: null,
@@ -908,7 +1074,7 @@ export const DepotRouteWaypointDefault: DepotRouteWaypoint = {
     travel_energy: null,
     untimely_arrival_duration: null,
     depot: {
-        duration: 600,
+        duration: null,
         id: null,
         delayed_start_costs: {
             per_hour: 15,
@@ -918,6 +1084,11 @@ export const DepotRouteWaypointDefault: DepotRouteWaypoint = {
             lng: null,
         },
         throughput: null,
+        throughput_violation_costs: {
+            per_count: 10,
+            per_event: 100,
+            per_kg: 10,
+        },
         time_window: {
             end: null,
             start: null,
@@ -933,9 +1104,23 @@ export const DepotRouteWaypointDefault: DepotRouteWaypoint = {
 
 export const RouteShiftDefault: RouteShift = {
     balance_key: null,
-    duration_limit: 86400,
+    duration_limit: null,
     gap: null,
     id: null,
+    distance_limit: {
+        max: null,
+        failure_costs: {
+            per_event: 1000,
+            per_m: 10,
+        },
+    },
+    energy_limit: {
+        max: null,
+        failure_costs: {
+            per_event: 1000,
+            per_kwh: 100,
+        },
+    },
     late_operations_costs: {
         per_event: 15,
         per_late_minute: 0.25,
@@ -958,6 +1143,7 @@ export const RouteStatisticsDefault: RouteStatistics = {
     objective_value: null,
     total_cost: null,
     total_cost_and_penalty: null,
+    total_depot_throughput_penalty: null,
     total_duration: null,
     total_idle_duration: null,
     total_locality_penalty: null,
@@ -990,11 +1176,11 @@ export const RouteVehicleDefault: RouteVehicle = {
         weight: 51200,
     },
     costs: {
-        per_event: 50,
+        per_event: 1000,
         per_hour: 10,
         per_km: 15,
-        per_kwh: null,
-        per_site: null,
+        per_kwh: 0.1,
+        per_site: 0.1,
         moved_load: null,
     },
     min_load: {
@@ -1017,19 +1203,19 @@ export const SiteRouteWaypointDefault: SiteRouteWaypoint = {
     untimely_arrival_duration: null,
     site: {
         deliver_to: null,
-        duration: 600,
+        duration: null,
         id: null,
         job: "delivery",
         loading_duration: null,
         preparing_duration: null,
         required_capabilities: [],
         same_route_key: null,
-        unperformed_cost: 200,
+        unperformed_cost: 100000000,
         load: {
             categories: [],
             count: null,
-            volume: 0.005,
-            weight: 1,
+            volume: null,
+            weight: null,
         },
         location: {
             lat: null,
@@ -1053,6 +1239,7 @@ export const SolutionStatisticsDefault: SolutionStatistics = {
     objective_value: null,
     total_cost: null,
     total_cost_and_penalty: null,
+    total_depot_throughput_penalty: null,
     total_duration: null,
     total_idle_duration: null,
     total_locality_penalty: null,
@@ -1078,18 +1265,18 @@ export const UnservedSiteDefault: UnservedSite = {
     reason: null,
     site: {
         deliver_to: null,
-        duration: 600,
+        duration: null,
         job: "delivery",
         loading_duration: null,
         preparing_duration: null,
         required_capabilities: [],
         same_route_key: null,
-        unperformed_cost: 200,
+        unperformed_cost: 100000000,
         load: {
             categories: [],
             count: null,
-            volume: 0.005,
-            weight: 1,
+            volume: null,
+            weight: null,
         },
         location: {
             lat: null,
@@ -1123,9 +1310,23 @@ export const VehicleRouteDefault: VehicleRoute = {
     waypoints: [],
     active_shift: {
         balance_key: null,
-        duration_limit: 86400,
+        duration_limit: null,
         gap: null,
         id: null,
+        distance_limit: {
+            max: null,
+            failure_costs: {
+                per_event: 1000,
+                per_m: 10,
+            },
+        },
+        energy_limit: {
+            max: null,
+            failure_costs: {
+                per_event: 1000,
+                per_kwh: 100,
+            },
+        },
         late_operations_costs: {
             per_event: 15,
             per_late_minute: 0.25,
@@ -1147,6 +1348,7 @@ export const VehicleRouteDefault: VehicleRoute = {
         objective_value: null,
         total_cost: null,
         total_cost_and_penalty: null,
+        total_depot_throughput_penalty: null,
         total_duration: null,
         total_idle_duration: null,
         total_locality_penalty: null,
@@ -1178,11 +1380,11 @@ export const VehicleRouteDefault: VehicleRoute = {
             weight: 51200,
         },
         costs: {
-            per_event: 50,
+            per_event: 1000,
             per_hour: 10,
             per_km: 15,
-            per_kwh: null,
-            per_site: null,
+            per_kwh: 0.1,
+            per_site: 0.1,
             moved_load: null,
         },
         min_load: {
@@ -1209,7 +1411,7 @@ export const RouteOptimizationSolutionDefault: RouteOptimizationSolution = {
         same_route_sites: {},
     },
     depot: {
-        duration: 600,
+        duration: null,
         delayed_start_costs: {
             per_hour: 15,
         },
@@ -1218,6 +1420,11 @@ export const RouteOptimizationSolutionDefault: RouteOptimizationSolution = {
             lng: null,
         },
         throughput: null,
+        throughput_violation_costs: {
+            per_count: 10,
+            per_event: 100,
+            per_kg: 10,
+        },
         time_window: {
             end: null,
             start: null,
@@ -1242,6 +1449,7 @@ export const RouteOptimizationSolutionDefault: RouteOptimizationSolution = {
         objective_value: null,
         total_cost: null,
         total_cost_and_penalty: null,
+        total_depot_throughput_penalty: null,
         total_duration: null,
         total_idle_duration: null,
         total_locality_penalty: null,
@@ -1280,7 +1488,7 @@ export const ResponseDefault: Response = {
         same_route_sites: {},
     },
     depot: {
-        duration: 600,
+        duration: null,
         delayed_start_costs: {
             per_hour: 15,
         },
@@ -1289,6 +1497,11 @@ export const ResponseDefault: Response = {
             lng: null,
         },
         throughput: null,
+        throughput_violation_costs: {
+            per_count: 10,
+            per_event: 100,
+            per_kg: 10,
+        },
         time_window: {
             end: null,
             start: null,
@@ -1313,6 +1526,7 @@ export const ResponseDefault: Response = {
         objective_value: null,
         total_cost: null,
         total_cost_and_penalty: null,
+        total_depot_throughput_penalty: null,
         total_duration: null,
         total_idle_duration: null,
         total_locality_penalty: null,

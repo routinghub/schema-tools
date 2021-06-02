@@ -63,6 +63,24 @@ export type Capacity = {
     weight?: number;
 };
 
+export type CompositeCostMatrix = {
+    // Type of available matrix dimensions, that must appear in cost matrix body.
+    // 
+    // Following types are supported:
+    // * `distance_duration` - transit distance and duration;
+    // * `distance_duration_energy` - transit distance, duration and energy spent during the transition
+    dimensions?: ("distance_duration" | "distance_duration_energy");
+    // Composite cost matrix, includes multiple submatrices for different vehicle types or time points.
+    // 
+    // All submatrices must have equal dimensions.
+    type: ("composite");
+    value: CompositeCostMatrixItem[];
+    metadata?: {
+    };
+};
+
+export type CompositeCostMatrixItem = GcsCostMatrixReference | UrlCostMatrixReference | JsonTimePointCostMatrix;
+
 export type Constraints = {
     // Vehicle shifts balancing.
     // 
@@ -81,14 +99,7 @@ export type Constraints = {
     same_route_sites?: SameRouteSitesDictionary;
 };
 
-export type CostMatrix = OsrmCostMatrix | HereCostMatrix | ZeroCostMatrix | GcsCostMatrix | StraightLineCostMatrix | UrlCostMatrix | JsonCostMatrix;
-
-export type CostMatrixTimeInterval = {
-    // Interval end, ISO8601 timestamp with timezone
-    end: string;
-    // Interval start, ISO8601 timestamp with timezone
-    start: string;
-};
+export type CostMatrix = HereCostMatrix | OsrmCostMatrix | GcsCostMatrixReference | UrlCostMatrixReference | JsonCostMatrix | ZeroCostMatrix | StraightLineCostMatrix | CompositeCostMatrix;
 
 export type DelayedStartCosts = {
     // Cost per each hour of delayed start from the depot.
@@ -100,25 +111,36 @@ export type DelayedStartCosts = {
 export type Depot = {
     // Costs of delayed start of a route at the depot.
     // 
-    // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding penalty added to the overall cost of the route.
+    // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding violation cost added to the total cost of the route.
     delayed_start_costs?: DelayedStartCosts;
     // Duration that vehicle spends at a depot (e.g. goods loading), seconds.
     duration?: number;
     location: GeographicLocation;
     throughput?: DepotThroughput;
+    // Costs of violating defined depot throughput.
+    // 
+    // Added to the total cost of the route when load handled by depot exceeds defined throughput limits.
+    throughput_violation_costs?: ThroughputViolationCosts;
     // Time window for depot operations.
     //  
     // Range of time, when depot is allowed to dispatch or accept returning vehicles.
     time_window: TimeWindow;
-    // Costs of untimely depot operations.
+    // Costs for depot time window violation.
     // 
-    // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result corresponding penalty added to the overall cost of the route.
+    // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result violation cost added to the total cost of the route.
     untimely_operations_costs?: UntimelyOperationsCosts;
 };
 
-export type DepotThroughput = KilogramsPerHour | ItemsPerHour;
+export type DepotThroughput = TimeConstantDepotThroughput | TimeVariableDepotThroughput;
 
 export type DepotsDictionary = {[id: string] : Depot};
+
+export type DistanceLimitFailureCosts = {
+    // Cost per each shift violating the limit
+    per_event?: number;
+    // Cost per each meter of transit distance, violating the limit
+    per_m?: number;
+};
 
 export type EmployedVehiclesLimit = {
     // Cost of employing less than a minimum number of vehicles.
@@ -127,7 +149,14 @@ export type EmployedVehiclesLimit = {
     min: number;
 };
 
-export type GcsCostMatrix = {
+export type EnergyLimitFailureCosts = {
+    // Cost per each shift violating the limit
+    per_event?: number;
+    // Cost per each kWh of transit energy, violating the limit
+    per_kwh?: number;
+};
+
+export type GcsCostMatrixReference = {
     // GCS bucket
     bucket: string;
     // Type of available matrix dimensions, that must appear in cost matrix body.
@@ -136,9 +165,13 @@ export type GcsCostMatrix = {
     // * `distance_duration` - transit distance and duration;
     // * `distance_duration_energy` - transit distance, duration and energy spent during the transition
     dimensions?: ("distance_duration" | "distance_duration_energy");
-    // Path to object in GCS bucket
+    // Full path to object in GCS bucket
     object: string;
-    // Cost matrix specified as remote JSON file, stored in Google Cloud Storage bucket. Specified bucket must be read-accessible by everyone, or by privately configured Service Account. For format of remote JSON file see `JsonCostMatrix`
+    // Cost matrix specified as remote JSON file stored in Google Cloud Storage bucket. 
+    // 
+    // The bucket must be publically accessible, or configured for private access by internal service account. 
+    // 
+    // The object can optionally be compressed with gzip, and will be decompressed automatically after download, if object body starts from the valid gzip header.
     type: ("gcs");
 };
 
@@ -150,13 +183,13 @@ export type GeographicLocation = {
 };
 
 export type HereCostMatrix = {
-    // Cost matrix requested from HERE Matrix API (car profile)
+    time_points?: string[];
+    // Cost matrix requested from HERE Matrix API v8.
     type: ("here");
-};
-
-export type ItemsPerHour = {
-    // Maximum number of items processed per hour.
-    items: number;
+    // Vehicle type, affects transit speed and restrictions.
+    // 
+    // Specified timepoints will be ignored for `heavy`.
+    vehicle_type?: ("light" | "heavy");
 };
 
 export type JsonCostMatrix = {
@@ -166,14 +199,48 @@ export type JsonCostMatrix = {
     // * `distance_duration` - transit distance and duration;
     // * `distance_duration_energy` - transit distance, duration and energy spent during the transition
     dimensions?: ("distance_duration" | "distance_duration_energy");
-    // Cost matrices inlined in JSON.
+    // Transit cost matrices inlined in JSON.
     type: ("json");
-    value: TimeIndependentCostMatrix | TimeDependentCostMatrix[];
+    // Row-major matrices of transit distances and durations between origins and destinations.
+    value: JsonCostMatrixValue;
+    metadata?: {
+    };
 };
 
-export type KilogramsPerHour = {
-    // Maximum weight processed per hour, kilograms.
-    kilograms: number;
+export type JsonCostMatrixValue = {
+    // Transit distances, meters.
+    distances: RowMajorMatrix;
+    // Transit durations, seconds.
+    durations: RowMajorMatrix;
+    // Transit energy, kW/h per distance in meters. 
+    // 
+    // Required when `dimensions` value is set to `distance_duration_energy`, otherwise optional. Allows negative values in matrix cells.
+    energy?: RowMajorMatrixWithNegatives;
+    // An array of matrix cells indices (`[row, column]`), where distance calculation failed (non-routable locations, closed roads, etc).
+    // 
+    // Failed cells are replaced with:
+    // * `distances`, approximate straight line distance [as per US FCC formula](https://www.gpo.gov/fdsys/pkg/CFR-2005-title47-vol4/pdf/CFR-2005-title47-vol4-sec73-208.pdf)
+    // * `durations`, travel duration for approximated distance at speed 20 km/h
+    // * `energy`, 0.2 kW/h per each km of approximated distance
+    // 
+    fallback_cells?: MatrixCoordinates;
+};
+
+export type JsonTimePointCostMatrix = {
+    // Type of available matrix dimensions, that must appear in cost matrix body.
+    // 
+    // Following types are supported:
+    // * `distance_duration` - transit distance and duration;
+    // * `distance_duration_energy` - transit distance, duration and energy spent during the transition
+    dimensions?: ("distance_duration" | "distance_duration_energy");
+    // Time of departure for all origins/destinations, ISO8601 timestamp with timezone
+    time_point?: string;
+    // Transit cost matrices inlined in JSON.
+    type: ("json_time_point");
+    // Row-major matrices of transit distances and durations between origins and destinations, where all routes are departing at specified time point.
+    value: JsonCostMatrixValue;
+    metadata?: {
+    };
 };
 
 export type LateOperationsCosts = {
@@ -199,7 +266,7 @@ export type Load = {
     weight?: number;
 };
 
-export type MatrixCoordinates = number[][];
+export type MatrixCoordinates = integer[][];
 
 export type MinimiumLoad = {
     // Count, items.
@@ -229,7 +296,7 @@ export type MovedLoadCostKgKm = {
 };
 
 export type Options = {
-    // Matrix of distances and durations between all depots and sites.
+    // Matrix of transit distances and durations between all depots and sites.
     cost_matrix?: CostMatrix;
     minimization_target?: ("cost");
     internal?: {
@@ -237,11 +304,13 @@ export type Options = {
 };
 
 export type OsrmCostMatrix = {
-    // Cost matrix from OpenStreetMap (default OSRM car profile)
+    // Cost matrix from OpenStreetMap (OSRM router, car profile)
     type: ("osrm");
 };
 
 export type RowMajorMatrix = number[][];
+
+export type RowMajorMatrixWithNegatives = number[][];
 
 export type SameRoute = {
     failure_costs?: {
@@ -257,10 +326,18 @@ export type Shift = {
     // 
     // See `constraints.balanced_shifts`
     balance_key?: string;
-    // Maximum possible duration of the shift, seconds.
+    // Maximum transit distance of the shift, meters.
     // 
-    // In case when duration of the shift exceeds defined limit, `late_operations_costs` are added to the total cost of the route proportionaly to excess time. 
+    // In case when transit distance of a shift route exceeds defined limit, `distance_limit.failure_costs` are added to the total cost of the route proportionaly to excess distance.
+    distance_limit?: ShiftDistanceLimit;
+    // Maximum duration of the shift, seconds.
+    // 
+    // In case when duration of the shift exceeds defined limit, `late_operations_costs` are added to the total cost of the route proportionaly to excess time.
     duration_limit?: number;
+    // Maximum transit energy of the shift, kWh.
+    // 
+    // In case when transit energy of a shift route exceeds defined limit, `energy_limit.failure_costs` are added to the total cost of the route proportionaly to excess energy.
+    energy_limit?: ShiftEnergyLimit;
     // Delay between consecutive shifts performed by a vehicle, seconds.
     // 
     // The `gap` value can be used to model fixed-time operations between the shifts, such as swapping the driver, or processing the paperwork at the depot.
@@ -269,7 +346,7 @@ export type Shift = {
     // 
     // Added to total cost of the solution, when shift is finished later than specified shift time window. Does not apply when `time_window.strict = true`.
     late_operations_costs?: LateOperationsCosts;
-    // Restriction of number of stops per shift routes (currently only minimum number of stops).
+    // Minimum number of site stops per each shift route.
     // 
     // Note that co-located sites are accounted as one stop, and depot start and end is not counted.
     stops_limit?: ShiftStopsLimit;
@@ -279,12 +356,26 @@ export type Shift = {
     time_window: TimeWindow;
 };
 
+export type ShiftDistanceLimit = {
+    // Cost of violating maximum transit distance limit of the route (`distance_limit.max`).
+    failure_costs?: DistanceLimitFailureCosts;
+    // Maximum transit distance of the route, meters.
+    max: number;
+};
+
+export type ShiftEnergyLimit = {
+    // Cost of violating maximum transit energy limit of the route (`energy_limit.max`).
+    failure_costs?: EnergyLimitFailureCosts;
+    // Maximum transit energy of the route, kWh.
+    max: number;
+};
+
 export type ShiftStopsLimit = {
     // Cost of having less than `stops_limit.min` stops in the route.
     // 
-    // Added to total cost of the solution, when route has less than required number of stops. Does not apply when `stops_limit.min = 0` or when `stops_limit.min` is not defined.
+    // Added to total cost of the solution, when route has less than required number of stops.
     failure_costs?: StopsLimitFailureCosts;
-    // Minumum number of stops a vehicle should made on the route. Note that co-located sites are accounted as one stop, and depot start and end is not counted.
+    // Minumum number of stops a vehicle should made on the route. Note that co-located sites are counted as one stop, and depot start and end is not counted.
     min: number;
 };
 
@@ -343,73 +434,74 @@ export type SiteBase = {
 export type SitesDictionary = {[id: string] : Site};
 
 export type StopsLimitFailureCosts = {
-    // Cost per an event of constraint failure (fixed)
+    // Cost per each shift violating the limit
     per_event?: number;
-    // Cost per each stop not satisfying the constraint
+    // Cost per each stop violating the limit
     per_stop?: number;
 };
 
 export type StraightLineCostMatrix = {
     // Cost matrix calculated using straight line distance [as per US FCC formula](https://www.gpo.gov/fdsys/pkg/CFR-2005-title47-vol4/pdf/CFR-2005-title47-vol4-sec73-208.pdf)
     // 
-    // Transit durations are calculated with speed 30 km/h
+    // Transit durations are calculated with speed 20 km/h
     // 
     type: ("straight_line");
 };
 
-export type TimeDependentCostMatrix = {
-    // Transit distances, meters.
-    distances: RowMajorMatrix;
-    // Transit durations, seconds.
-    durations: RowMajorMatrix;
-    // Transit energy, kW/h. 
-    // 
-    // Required when `dimensions` value is set to `distance_duration_energy`, otherwise optional
-    energy?: RowMajorMatrix;
-    // An array of matrix cells indices (`[row, column]`), where distance calculation failed (non-routable locations, closed roads, etc).
-    // 
-    // Failed cells are replaced with:
-    // * `distances`, approximate straight line distance [as per US FCC formula](https://www.gpo.gov/fdsys/pkg/CFR-2005-title47-vol4/pdf/CFR-2005-title47-vol4-sec73-208.pdf)
-    // * `durations`, duration for approximate distance with speed * `energy`, 0 kWh
-    //  km/h
-    // 
-    fallback_cells?: MatrixCoordinates;
-    // Interval of time when the matrix should be used.
-    interval: CostMatrixTimeInterval;
+export type ThroughputItems = {
+    // Maximum number of items released per hour.
+    items_per_hour: number;
 };
 
-export type TimeIndependentCostMatrix = {
-    // Transit distances, meters.
-    distances: RowMajorMatrix;
-    // Transit durations, seconds.
-    durations: RowMajorMatrix;
-    // Transit energy, kW/h. 
-    // 
-    // Required when `dimensions` value is set to `distance_duration_energy`, otherwise optional
-    energy?: RowMajorMatrix;
-    // An array of matrix cells indices (`[row, column]`), where distance calculation failed (non-routable locations, closed roads, etc).
-    // 
-    // Failed cells are replaced with:
-    // * `distances`, approximate straight line distance [as per US FCC formula](https://www.gpo.gov/fdsys/pkg/CFR-2005-title47-vol4/pdf/CFR-2005-title47-vol4-sec73-208.pdf)
-    // * `durations`, duration for approximate distance with speed * `energy`, 0 kWh
-    //  km/h
-    // 
-    fallback_cells?: MatrixCoordinates;
+export type ThroughputViolationCosts = {
+    // Cost per each countable item of handled load exceeding defined depot throughput
+    per_count?: number;
+    // Cost per an event of depot throughput violation
+    per_event?: number;
+    // Cost per each kg of handled load exceeding defined depot throughput
+    per_kg?: number;
 };
+
+export type ThroughputWeight = {
+    // Maximum weight released per hour, kilograms.
+    weight_per_hour: number;
+};
+
+export type TimeConstantDepotThroughput = ThroughputItems | ThroughputWeight;
+
+export type TimeDependentThroughputItems = {
+    // Maximum number of items released per hour.
+    items_per_hour: number;
+    // Time point when throughput value starts to apply, ISO8601 datetime format.
+    time_point: string;
+};
+
+export type TimeDependentThroughputWeight = {
+    // Time point when throughput value starts to apply, ISO8601 datetime format.
+    time_point: string;
+    // Maximum weight released per hour, kilograms.
+    weight_per_hour: number;
+};
+
+export type TimeVariableDepotThroughput = TimeVariableThroughputWeightList | TimeVariableThroughputItemsList;
+
+export type TimeVariableThroughputItemsList = TimeDependentThroughputItems[];
+
+export type TimeVariableThroughputWeightList = TimeDependentThroughputWeight[];
 
 export type TimeWindow = {
     // Time window end in ISO-8601 format.
     // 
     // Examples:  
-    // `2018-01-02T15:30:00Z` for time in UTC;  
-    // `2018-01-02T15:30:00+02:00` for time with timezone.  
+    // `2020-01-02T15:30:00Z` for time in UTC;  
+    // `2020-01-02T15:30:00+02:00` for time with timezone.  
     // 
     end: string;
     // Time window start in ISO-8601 format.
     // 
     // Examples:  
-    // `2018-01-02T15:30:00Z` for time in UTC;  
-    // `2018-01-02T15:30:00+02:00` for time with timezone.
+    // `2020-01-02T15:30:00Z` for time in UTC;  
+    // `2020-01-02T15:30:00+02:00` for time with timezone.
     start: string;
     // Indicates that time window can not be failed, i.e. late or early arrival is not possible.
     strict?: boolean;
@@ -424,14 +516,14 @@ export type UntimelyOperationsCosts = {
     per_late_minute?: number;
 };
 
-export type UrlCostMatrix = {
+export type UrlCostMatrixReference = {
     // Type of available matrix dimensions, that must appear in cost matrix body.
     // 
     // Following types are supported:
     // * `distance_duration` - transit distance and duration;
     // * `distance_duration_energy` - transit distance, duration and energy spent during the transition
     dimensions?: ("distance_duration" | "distance_duration_energy");
-    // Cost matrix specified as remote JSON file, accessible over HTTPS at specified URL. For JSON format, see `JsonCostMatrix.value` field
+    // Cost matrix specified as remote JSON resource, accessible via HTTPS at specified URL. 
     type: ("url");
     // HTTPS URL of remote JSON resource
     url: string;
@@ -497,19 +589,23 @@ export type RouteOptimizationRequest = {
     depot?: {
         // Costs of delayed start of a route at the depot.
         // 
-        // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding penalty added to the overall cost of the route.
+        // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding violation cost added to the total cost of the route.
         delayed_start_costs?: DelayedStartCosts;
         // Duration that vehicle spends at a depot (e.g. goods loading), seconds.
         duration?: number;
         location: GeographicLocation;
         throughput?: DepotThroughput;
+        // Costs of violating defined depot throughput.
+        // 
+        // Added to the total cost of the route when load handled by depot exceeds defined throughput limits.
+        throughput_violation_costs?: ThroughputViolationCosts;
         // Time window for depot operations.
         //  
         // Range of time, when depot is allowed to dispatch or accept returning vehicles.
         time_window: TimeWindow;
-        // Costs of untimely depot operations.
+        // Costs for depot time window violation.
         // 
-        // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result corresponding penalty added to the overall cost of the route.
+        // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result violation cost added to the total cost of the route.
         untimely_operations_costs?: UntimelyOperationsCosts;
     };
 };
@@ -518,24 +614,26 @@ export type Request = RouteOptimizationRequest;
 
 export type AccumulativeStatistics = {
     objective_value?: number;
-    // Total cost of all routes
+    // Total vehicle cost
     total_cost: number;
-    // Total cost of all routes with penalties
+    // Total vehicle cost with all violations
     total_cost_and_penalty: number;
+    // Total cost of depot throughput violation
+    total_depot_throughput_penalty: number;
     // Total time of all routes (end of latest route - begin of earliest route)
     total_duration: number;
     // Total time spent not performing service at site, and not travelling between sites (`total_duration - total_travel_duration - sum(site.duration)`)
     total_idle_duration: number;
-    // Total locality penalty of all routes
+    // Total cost of locality violations
     total_locality_penalty: number;
-    // Experimental
+    // Total load in countable units, moved over distance in kilometers
     total_moved_load_countkm?: number;
-    // Experimental
+    // Total load in kilograms, moved over distance in kilometers
     total_moved_load_kgkm?: number;
-    // Total penalty of all routes
+    // Total violations cost
     total_penalty: number;
-    // Total penalty for same route sites constraint
-    total_same_route_penalty?: number;
+    // Total cost of soft same route sites constraint violation
+    total_same_route_penalty: number;
     // Total transit distance for all routes
     total_travel_distance: number;
     // Total time spent in transit for all routes
@@ -565,7 +663,7 @@ export type DepotRouteWaypoint = {
     depot?: {
         // Costs of delayed start of a route at the depot.
         // 
-        // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding penalty added to the overall cost of the route.
+        // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding violation cost added to the total cost of the route.
         delayed_start_costs?: DelayedStartCosts;
         // Duration that vehicle spends at a depot (e.g. goods loading), seconds.
         duration?: number;
@@ -573,13 +671,17 @@ export type DepotRouteWaypoint = {
         id: string;
         location: GeographicLocation;
         throughput?: DepotThroughput;
+        // Costs of violating defined depot throughput.
+        // 
+        // Added to the total cost of the route when load handled by depot exceeds defined throughput limits.
+        throughput_violation_costs?: ThroughputViolationCosts;
         // Time window for depot operations.
         //  
         // Range of time, when depot is allowed to dispatch or accept returning vehicles.
         time_window: TimeWindow;
-        // Costs of untimely depot operations.
+        // Costs for depot time window violation.
         // 
-        // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result corresponding penalty added to the overall cost of the route.
+        // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result violation cost added to the total cost of the route.
         untimely_operations_costs?: UntimelyOperationsCosts;
     };
 };
@@ -589,10 +691,18 @@ export type RouteShift = {
     // 
     // See `constraints.balanced_shifts`
     balance_key?: string;
-    // Maximum possible duration of the shift, seconds.
+    // Maximum transit distance of the shift, meters.
     // 
-    // In case when duration of the shift exceeds defined limit, `late_operations_costs` are added to the total cost of the route proportionaly to excess time. 
+    // In case when transit distance of a shift route exceeds defined limit, `distance_limit.failure_costs` are added to the total cost of the route proportionaly to excess distance.
+    distance_limit?: ShiftDistanceLimit;
+    // Maximum duration of the shift, seconds.
+    // 
+    // In case when duration of the shift exceeds defined limit, `late_operations_costs` are added to the total cost of the route proportionaly to excess time.
     duration_limit?: number;
+    // Maximum transit energy of the shift, kWh.
+    // 
+    // In case when transit energy of a shift route exceeds defined limit, `energy_limit.failure_costs` are added to the total cost of the route proportionaly to excess energy.
+    energy_limit?: ShiftEnergyLimit;
     // Delay between consecutive shifts performed by a vehicle, seconds.
     // 
     // The `gap` value can be used to model fixed-time operations between the shifts, such as swapping the driver, or processing the paperwork at the depot.
@@ -603,7 +713,7 @@ export type RouteShift = {
     // 
     // Added to total cost of the solution, when shift is finished later than specified shift time window. Does not apply when `time_window.strict = true`.
     late_operations_costs?: LateOperationsCosts;
-    // Restriction of number of stops per shift routes (currently only minimum number of stops).
+    // Minimum number of site stops per each shift route.
     // 
     // Note that co-located sites are accounted as one stop, and depot start and end is not counted.
     stops_limit?: ShiftStopsLimit;
@@ -615,24 +725,26 @@ export type RouteShift = {
 
 export type RouteStatistics = {
     objective_value?: number;
-    // Total cost of all routes
+    // Total vehicle cost
     total_cost: number;
-    // Total cost of all routes with penalties
+    // Total vehicle cost with all violations
     total_cost_and_penalty: number;
+    // Total cost of depot throughput violation
+    total_depot_throughput_penalty: number;
     // Total time of all routes (end of latest route - begin of earliest route)
     total_duration: number;
     // Total time spent not performing service at site, and not travelling between sites (`total_duration - total_travel_duration - sum(site.duration)`)
     total_idle_duration: number;
-    // Total locality penalty of all routes
+    // Total cost of locality violations
     total_locality_penalty: number;
-    // Experimental
+    // Total load in countable units, moved over distance in kilometers
     total_moved_load_countkm?: number;
-    // Experimental
+    // Total load in kilograms, moved over distance in kilometers
     total_moved_load_kgkm?: number;
-    // Total penalty of all routes
+    // Total violations cost
     total_penalty: number;
-    // Total penalty for same route sites constraint
-    total_same_route_penalty?: number;
+    // Total cost of soft same route sites constraint violation
+    total_same_route_penalty: number;
     // Total transit distance for all routes
     total_travel_distance: number;
     // Total time spent in transit for all routes
@@ -732,24 +844,26 @@ export type SolutionStatistics = {
     employed_vehicles_count: number;
     // (internal) solution objective value
     objective_value: number;
-    // Total cost of all routes
+    // Total vehicle cost
     total_cost: number;
-    // Total cost of all routes with penalties
+    // Total vehicle cost with all violations
     total_cost_and_penalty: number;
+    // Total cost of depot throughput violation
+    total_depot_throughput_penalty: number;
     // Total time of all routes (end of latest route - begin of earliest route)
     total_duration: number;
     // Total time spent not performing service at site, and not travelling between sites (`total_duration - total_travel_duration - sum(site.duration)`)
     total_idle_duration: number;
-    // Total locality penalty of all routes
+    // Total cost of locality violations
     total_locality_penalty: number;
-    // Experimental
+    // Total load in countable units, moved over distance in kilometers
     total_moved_load_countkm?: number;
-    // Experimental
+    // Total load in kilograms, moved over distance in kilometers
     total_moved_load_kgkm?: number;
-    // Total penalty of all routes
+    // Total violations cost
     total_penalty: number;
-    // Total penalty for same route sites constraint
-    total_same_route_penalty?: number;
+    // Total cost of soft same route sites constraint violation
+    total_same_route_penalty: number;
     // Total transit distance for all routes
     total_travel_distance: number;
     // Total time spent in transit for all routes
@@ -810,19 +924,23 @@ export type RouteOptimizationSolution = {
     depot?: {
         // Costs of delayed start of a route at the depot.
         // 
-        // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding penalty added to the overall cost of the route.
+        // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding violation cost added to the total cost of the route.
         delayed_start_costs?: DelayedStartCosts;
         // Duration that vehicle spends at a depot (e.g. goods loading), seconds.
         duration?: number;
         location: GeographicLocation;
         throughput?: DepotThroughput;
+        // Costs of violating defined depot throughput.
+        // 
+        // Added to the total cost of the route when load handled by depot exceeds defined throughput limits.
+        throughput_violation_costs?: ThroughputViolationCosts;
         // Time window for depot operations.
         //  
         // Range of time, when depot is allowed to dispatch or accept returning vehicles.
         time_window: TimeWindow;
-        // Costs of untimely depot operations.
+        // Costs for depot time window violation.
         // 
-        // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result corresponding penalty added to the overall cost of the route.
+        // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result violation cost added to the total cost of the route.
         untimely_operations_costs?: UntimelyOperationsCosts;
     };
 };

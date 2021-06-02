@@ -1,20 +1,33 @@
 {
   "name": "@routinghub/schema-tools",
-  "main": "scripts/excel-parse.ts",
-  "version": "0.0.0",
-  "repository": "git@github.com:routinghub/schema-tools.git",
-  "author": "Denis Kurilov <denis@routinghub.com>",
+  "version": "0.1.0",
+  "repository": "https://github.com/routinghub/schema-tools",
+  "author": "Denis Kurilov <support@routinghub.com>",
   "license": "MIT",
-  "dependencies": {
-    "@types/node": "^15.6.1"
+  "scripts": {
+    "fetch-routing-schema": "curl https://routinghub.com/api/routing/v1-devel/schemas/openapi.json > src/routing.openapi.json",
+    "build-routing-schema": "yarn ts-node-transpile-only src/bin/openapi-convert.ts",
+    "routing-schema": "target=routing-schema; yarn fetch-$target && yarn build-$target",
+    "convert-routing-excel": "yarn ts-node-transpile-only src/bin/excel-parse.ts"
   },
+  "engines": {
+    "node": ">=15",
+    "yarn": ">=1.1.0"
+  },
+  "dependencies": {},
   "devDependencies": {
     "@apidevtools/json-schema-ref-parser": "^9.0.7",
     "@babel/core": "^7.14.3",
     "@babel/preset-typescript": "^7.13.0",
+    "@types/jest": "^26.0.23",
+    "@types/json-schema": "^7.0.7",
+    "@types/luxon": "^1.26.5",
+    "@types/node": "^15.6.1",
     "exceljs": "^4.2.1",
     "jest": "^27.0.3",
+    "luxon": "^1.27.0",
     "remark-parse": "^9.0.0",
+    "ts-jest": "^27.0.2",
     "ts-node": "^10.0.0",
     "typescript": "^4.3.2",
     "unified": "^9.2.1"

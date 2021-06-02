@@ -6,7 +6,7 @@ import { loadExcel } from "../excel_parser";
 const args = process.argv.slice(2);
 
 if (args.length == 0) {
-    // yarn --silent ts-node-transpile-only src/schemas/scripts/excel-parse.ts input.xlsx > out.json
+    // yarn --silent ts-node-transpile-only src/bin/excel-parse.ts input.xlsx > out.json
     const tsName = path.basename(process.argv[0]);
     const scriptName = path.join('./', process.argv[1].substr(process.cwd().length));
 
