@@ -18,7 +18,7 @@ yarn routing-schema
 
 Generate JSON from formatted Excel and write to stdout:
 ```
-yarn convert-routing-excel document.xlsx > out.json
+yarn convert-routing-excel document.xlsx out.json
 ```
 
 ## Notes
