@@ -22,7 +22,6 @@ yarn convert-routing-excel document.xlsx > out.json
 ```
 
 ## Notes
-
 The Excel -> JSON converter can be used to facilitate preparation of API requests
 from customer data.
 
@@ -33,3 +32,11 @@ The conversion to Routing API schema is straightforward:
 - `.json` field contains Routing API request definition;
 - `.json.options` field must be replaced with correct object, see https://routinghub.com/api/routing/v1-devel/doc#addRoutingRequest.request.options
 
+## Known issues
+Excel files, provided by customers and based on this template, can contain all sorts
+of inconsistencies that are not handled by the converter.
+
+Most common errors include non-flattened formulas, or invalid cell formats.
+
+In case when customer Excel template fails conversion, please share the problematic
+file via private support channel for partners.
