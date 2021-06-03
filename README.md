@@ -23,7 +23,13 @@ yarn convert-routing-excel document.xlsx > out.json
 
 ## Notes
 
-Generated JSON is used internally by `vrs-frontend` app, and not directly compatible 
-with Routing API schema (although). 
+The Excel -> JSON converter can be used to facilitate preparation of API requests
+from customer data.
 
-The converter can be used to facilitate preparation of API requests from customer data.
+Note, that generated JSON is to be used internally by `vrs-frontend` app, and not
+directly compatible with Routing API schema. 
+
+The conversion to Routing API schema is straightforward:
+- `.json` field contains Routing API request definition;
+- `.json.options` field must be replaced with correct object, see https://routinghub.com/api/routing/v1-devel/doc#addRoutingRequest.request.options
+
