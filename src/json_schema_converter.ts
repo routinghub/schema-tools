@@ -170,7 +170,7 @@ function recurseFlattenSchema(args: RecurseFlattenSchemaArgs)
                             patch: args.patch
                         });
                     });
-                    
+
                     args.result.push(args.patch(propFqName, { 
                         name: propName,
                         props: def,

@@ -1307,13 +1307,13 @@
                         "volume": {
                             "type": "number",
                             "minimum": 0,
-                            "default": 256,
+                            "default": 0,
                             "description": "Volume, cubic meters.\n\nWhen `volume` is not specified, and `weight` is specified, will be calculated from `weight` using [volumetric factor of 200 kg/cbm](https://en.wikipedia.org/wiki/Dimensional_weight)."
                         },
                         "weight": {
                             "type": "number",
                             "minimum": 0,
-                            "default": 51200,
+                            "default": 0,
                             "description": "Weight, kilograms.\n\nWhen `weight` is not specified, and `volume` is specified, will be calculated from `volume` using [volumetric factor of 200 kg/cbm](https://en.wikipedia.org/wiki/Dimensional_weight)."
                         },
                         "count": {
@@ -1345,7 +1345,7 @@
                 "props": {
                     "type": "number",
                     "minimum": 0,
-                    "default": 256,
+                    "default": 0,
                     "description": "Volume, cubic meters.\n\nWhen `volume` is not specified, and `weight` is specified, will be calculated from `weight` using [volumetric factor of 200 kg/cbm](https://en.wikipedia.org/wiki/Dimensional_weight)."
                 },
                 "required": false,
@@ -1356,7 +1356,7 @@
                 "props": {
                     "type": "number",
                     "minimum": 0,
-                    "default": 51200,
+                    "default": 0,
                     "description": "Weight, kilograms.\n\nWhen `weight` is not specified, and `volume` is specified, will be calculated from `volume` using [volumetric factor of 200 kg/cbm](https://en.wikipedia.org/wiki/Dimensional_weight)."
                 },
                 "required": false,
@@ -1365,7 +1365,7 @@
             {
                 "name": "costs",
                 "props": {
-                    "description": "Cost of vehicle usage.\n\nCosts of including the vehicle in a route. The units of cost components are undefined.",
+                    "description": "Vehicle costs.\n\nCosts weights of a vehicle en route. Includes fixed and unit-dependent costs (per km, per hour, etc.). \n\nAdded to the total minimized solution cost as weighted linear combination of route statistical values (time, distance, etc.) and corresponding cost weights.",
                     "type": "object",
                     "properties": {
                         "per_event": {
@@ -1392,15 +1392,13 @@
                         "per_site": {
                             "type": "number",
                             "minimum": 0,
-                            "exclusiveMinimum": true,
                             "default": 0.1,
                             "description": "Cost of visiting a site"
                         },
                         "per_kwh": {
                             "type": "number",
                             "minimum": 0,
-                            "exclusiveMinimum": true,
-                            "default": 0.1,
+                            "default": 0,
                             "description": "Cost of energy, used during transit to a site.\n\n**Note, that setting `per_kwh` cost requires cost matrix with `energy` dimension.**"
                         },
                         "moved_load": {
@@ -1487,8 +1485,7 @@
                 "props": {
                     "type": "number",
                     "minimum": 0,
-                    "exclusiveMinimum": true,
-                    "default": 0.1,
+                    "default": 0,
                     "description": "Cost of energy, used during transit to a site.\n\n**Note, that setting `per_kwh` cost requires cost matrix with `energy` dimension.**"
                 },
                 "required": false,
@@ -1499,7 +1496,6 @@
                 "props": {
                     "type": "number",
                     "minimum": 0,
-                    "exclusiveMinimum": true,
                     "default": 0.1,
                     "description": "Cost of visiting a site"
                 },
@@ -2352,7 +2348,7 @@
                         "type": "object",
                         "properties": {
                             "costs": {
-                                "description": "Cost of vehicle usage.\n\nCosts of including the vehicle in a route. The units of cost components are undefined.",
+                                "description": "Vehicle costs.\n\nCosts weights of a vehicle en route. Includes fixed and unit-dependent costs (per km, per hour, etc.). \n\nAdded to the total minimized solution cost as weighted linear combination of route statistical values (time, distance, etc.) and corresponding cost weights.",
                                 "type": "object",
                                 "properties": {
                                     "per_event": {
@@ -2379,15 +2375,13 @@
                                     "per_site": {
                                         "type": "number",
                                         "minimum": 0,
-                                        "exclusiveMinimum": true,
                                         "default": 0.1,
                                         "description": "Cost of visiting a site"
                                     },
                                     "per_kwh": {
                                         "type": "number",
                                         "minimum": 0,
-                                        "exclusiveMinimum": true,
-                                        "default": 0.1,
+                                        "default": 0,
                                         "description": "Cost of energy, used during transit to a site.\n\n**Note, that setting `per_kwh` cost requires cost matrix with `energy` dimension.**"
                                     },
                                     "moved_load": {
@@ -2662,13 +2656,13 @@
                                     "volume": {
                                         "type": "number",
                                         "minimum": 0,
-                                        "default": 256,
+                                        "default": 0,
                                         "description": "Volume, cubic meters.\n\nWhen `volume` is not specified, and `weight` is specified, will be calculated from `weight` using [volumetric factor of 200 kg/cbm](https://en.wikipedia.org/wiki/Dimensional_weight)."
                                     },
                                     "weight": {
                                         "type": "number",
                                         "minimum": 0,
-                                        "default": 51200,
+                                        "default": 0,
                                         "description": "Weight, kilograms.\n\nWhen `weight` is not specified, and `volume` is specified, will be calculated from `volume` using [volumetric factor of 200 kg/cbm](https://en.wikipedia.org/wiki/Dimensional_weight)."
                                     },
                                     "count": {
@@ -2754,8 +2748,8 @@
                 "name": "matrix",
                 "props": {
                     "type": "string",
-                    "default": "osm",
-                    "description": "Transit distance and duration, can take one of the following values:\n\n`here` - use HERE Large Matrix API (must be enabled for user account);\n`osm` - (default) use OpenStreetMap and Open Source Routing Machine;"
+                    "default": "osrm",
+                    "description": "Transit distance and duration, can take one of the following values:\n\n`here` - use HERE Large Matrix API (must be enabled for user account);\n`osrm` - (default) use OpenStreetMap and Open Source Routing Machine without traffic;\n\nOther types of transit matrices and traffic support is available only via API."
                 },
                 "required": false,
                 "leaf": true
@@ -2765,7 +2759,7 @@
                 "props": {
                     "type": "string",
                     "default": "normal",
-                    "description": "Route planning quality, can take one of the following values:\n\n- `low` - low-quality and quick optimization mode, recommended to validate data integrity;\n- `normal` - (default) regular quality of optimization;\n- `high` - high quality of optimization (incurs additional cost and waiting time);\n"
+                    "description": "Route planning quality, can take one of the following values:\n\n- `debug` - quick optimization mode, recommended for request debugging and data integrity validation;\n- `normal` - (default) regular quality of optimization;\n- `high` - high quality of optimization (incurs additional cost and waiting time);\n"
                 },
                 "required": false,
                 "leaf": true
@@ -2796,12 +2790,12 @@
                 "quality": {
                     "type": "string",
                     "default": "normal",
-                    "description": "Route planning quality, can take one of the following values:\n\n- `low` - low-quality and quick optimization mode, recommended to validate data integrity;\n- `normal` - (default) regular quality of optimization;\n- `high` - high quality of optimization (incurs additional cost and waiting time);\n"
+                    "description": "Route planning quality, can take one of the following values:\n\n- `debug` - quick optimization mode, recommended for request debugging and data integrity validation;\n- `normal` - (default) regular quality of optimization;\n- `high` - high quality of optimization (incurs additional cost and waiting time);\n"
                 },
                 "matrix": {
                     "type": "string",
-                    "default": "osm",
-                    "description": "Transit distance and duration, can take one of the following values:\n\n`here` - use HERE Large Matrix API (must be enabled for user account);\n`osm` - (default) use OpenStreetMap and Open Source Routing Machine;"
+                    "default": "osrm",
+                    "description": "Transit distance and duration, can take one of the following values:\n\n`here` - use HERE Large Matrix API (must be enabled for user account);\n`osrm` - (default) use OpenStreetMap and Open Source Routing Machine without traffic;\n\nOther types of transit matrices and traffic support is available only via API."
                 }
             },
             "additionalProperties": false,

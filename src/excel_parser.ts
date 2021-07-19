@@ -291,7 +291,7 @@ export function parseExcel(wb: Excel.Workbook): ParseResult
             result.errors[key]!.push({message: `Sheet "${schema.sheetName}" is required but not found`})
             continue;
         }
-        
+ 
         const ws = worksheets.get(schema.sheetName)!;
 
         const leafFields = new Set(
@@ -312,7 +312,7 @@ export function parseExcel(wb: Excel.Workbook): ParseResult
         const fields = new Map<string, Field>(
             schema.fields.map(field => [field.name, field])
         );
-        
+ 
         result.json[key] = {};
         result.matrix[key]!
             .map(row => {

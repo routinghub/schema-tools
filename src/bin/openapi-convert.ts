@@ -256,7 +256,7 @@ function getOptionsExampleData(schema: Field[]): ExampleData
             '2020-09-01',
             'Europe/Berlin',
             'normal',
-            'osm'
+            'osrm'
         ]
     ];
 
@@ -428,18 +428,20 @@ const OPTIONS_SCHEMA: JSONSchema4 = {
             description:
                 'Route planning quality, can take one of the following values:\n' + 
                 '\n' +
-                '- `low` - low-quality and quick optimization mode, recommended to validate data integrity;\n' +
+                '- `debug` - quick optimization mode, recommended for request debugging and data integrity validation;\n' +
                 '- `normal` - (default) regular quality of optimization;\n' +
                 '- `high` - high quality of optimization (incurs additional cost and waiting time);\n'
         },
         'matrix': {
             type: 'string',
-            default: 'osm',
+            default: 'osrm',
             description:
                 'Transit distance and duration, can take one of the following values:\n' + 
                 '\n' +
                 '`here` - use HERE Large Matrix API (must be enabled for user account);\n' +
-                '`osm` - (default) use OpenStreetMap and Open Source Routing Machine;'
+                '`osrm` - (default) use OpenStreetMap and Open Source Routing Machine without traffic;' + 
+                '\n\n' +
+                'Other types of transit matrices and traffic support is available only via API.'
         }
     },
     additionalProperties: false,
@@ -1085,7 +1087,7 @@ function requestToExcel(outFileName: string)
                 '2020-12-01',
                 'Asia/Dubai',
                 'normal',
-                'osm'
+                'osrm'
             ]
         ];
     

@@ -298,7 +298,12 @@ export type MovedLoadCostKgKm = {
 export type Options = {
     // Matrix of transit distances and durations between all depots and sites.
     cost_matrix?: CostMatrix;
-    minimization_target?: ("cost");
+    // Solution quality:
+    // * `debug` - low-quality solution for validation of task constraints;
+    // * `normal` - regular solution quality, up to 10 minutes execution time;
+    // * `high` - best solution quality, up to 20 minutes execution time, additional 1-5% savings compare to `normal`;
+    // 
+    quality?: ("debug" | "normal" | "high");
     internal?: {
     };
 };
@@ -586,28 +591,6 @@ export type RouteOptimizationRequest = {
     // Route optimization options.
     options?: Options;
     sites: SitesDictionary;
-    depot?: {
-        // Costs of delayed start of a route at the depot.
-        // 
-        // Vehicles dispatched too late after depot or vehicle shift time window start will result corresponding violation cost added to the total cost of the route.
-        delayed_start_costs?: DelayedStartCosts;
-        // Duration that vehicle spends at a depot (e.g. goods loading), seconds.
-        duration?: number;
-        location: GeographicLocation;
-        throughput?: DepotThroughput;
-        // Costs of violating defined depot throughput.
-        // 
-        // Added to the total cost of the route when load handled by depot exceeds defined throughput limits.
-        throughput_violation_costs?: ThroughputViolationCosts;
-        // Time window for depot operations.
-        //  
-        // Range of time, when depot is allowed to dispatch or accept returning vehicles.
-        time_window: TimeWindow;
-        // Costs for depot time window violation.
-        // 
-        // Vehicles dispatched too early (before depot time window start) or returned too late (after time window end) will result violation cost added to the total cost of the route.
-        untimely_operations_costs?: UntimelyOperationsCosts;
-    };
 };
 
 export type Request = RouteOptimizationRequest;

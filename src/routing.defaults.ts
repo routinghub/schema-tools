@@ -27,8 +27,8 @@ export type BalancedShiftsDictionary = {[id: string] : BalancedShifts};
 
 export type Capacity = {
     count: number | null;
-    volume: number;
-    weight: number;
+    volume: number | null;
+    weight: number | null;
 };
 
 export type CompositeCostMatrix = {
@@ -157,7 +157,7 @@ export type MovedLoadCostKgKm = {
 
 export type Options = {
     cost_matrix: CostMatrix | null;
-    minimization_target: ("cost");
+    quality: ("debug" | "normal" | "high");
     internal: {
     };
 };
@@ -304,7 +304,7 @@ export type VehicleCosts = {
     per_event: number;
     per_hour: number;
     per_km: number;
-    per_kwh: number;
+    per_kwh: number | null;
     per_site: number;
 };
 
@@ -325,15 +325,6 @@ export type RouteOptimizationRequest = {
     fleet: VehiclesDictionary | null;
     options: Options | null;
     sites: SitesDictionary | null;
-    depot: {
-        delayed_start_costs: DelayedStartCosts | null;
-        duration: number | null;
-        location: GeographicLocation | null;
-        throughput: DepotThroughput | null;
-        throughput_violation_costs: ThroughputViolationCosts | null;
-        time_window: TimeWindow | null;
-        untimely_operations_costs: UntimelyOperationsCosts | null;
-    };
 };
 
 export type Request = RouteOptimizationRequest;
@@ -535,8 +526,8 @@ export const BalancedShiftsDictionaryDefault: BalancedShiftsDictionary = {};
 
 export const CapacityDefault: Capacity = {
     count: null,
-    volume: 256,
-    weight: 51200,
+    volume: null,
+    weight: null,
 };
 
 export const CompositeCostMatrixDefault: CompositeCostMatrix = {
@@ -700,7 +691,7 @@ export const MovedLoadCostKgKmDefault: MovedLoadCostKgKm = {
 };
 
 export const OptionsDefault: Options = {
-    minimization_target: "cost",
+    quality: "normal",
     cost_matrix: null,
     internal: {
     },
@@ -900,14 +891,14 @@ export const VehicleDefault: Vehicle = {
     roundtrip: true,
     capacity: {
         count: null,
-        volume: 256,
-        weight: 51200,
+        volume: null,
+        weight: null,
     },
     costs: {
         per_event: 1000,
         per_hour: 10,
         per_km: 15,
-        per_kwh: 0.1,
+        per_kwh: null,
         per_site: 0.1,
         moved_load: null,
     },
@@ -923,7 +914,7 @@ export const VehicleCostsDefault: VehicleCosts = {
     per_event: 1000,
     per_hour: 10,
     per_km: 15,
-    per_kwh: 0.1,
+    per_kwh: null,
     per_site: 0.1,
     moved_load: null,
 };
@@ -952,36 +943,10 @@ export const RouteOptimizationRequestDefault: RouteOptimizationRequest = {
         },
         same_route_sites: {},
     },
-    depot: {
-        duration: null,
-        delayed_start_costs: {
-            per_hour: 15,
-        },
-        location: {
-            lat: null,
-            lng: null,
-        },
-        throughput: null,
-        throughput_violation_costs: {
-            per_count: 10,
-            per_event: 100,
-            per_kg: 10,
-        },
-        time_window: {
-            end: null,
-            start: null,
-            strict: null,
-        },
-        untimely_operations_costs: {
-            per_early_minute: 0.25,
-            per_event: 15,
-            per_late_minute: 0.25,
-        },
-    },
     depots: {},
     fleet: {},
     options: {
-        minimization_target: "cost",
+        quality: "normal",
         cost_matrix: null,
         internal: {
         },
@@ -1002,36 +967,10 @@ export const RequestDefault: Request = {
         },
         same_route_sites: {},
     },
-    depot: {
-        duration: null,
-        delayed_start_costs: {
-            per_hour: 15,
-        },
-        location: {
-            lat: null,
-            lng: null,
-        },
-        throughput: null,
-        throughput_violation_costs: {
-            per_count: 10,
-            per_event: 100,
-            per_kg: 10,
-        },
-        time_window: {
-            end: null,
-            start: null,
-            strict: null,
-        },
-        untimely_operations_costs: {
-            per_early_minute: 0.25,
-            per_event: 15,
-            per_late_minute: 0.25,
-        },
-    },
     depots: {},
     fleet: {},
     options: {
-        minimization_target: "cost",
+        quality: "normal",
         cost_matrix: null,
         internal: {
         },
@@ -1172,14 +1111,14 @@ export const RouteVehicleDefault: RouteVehicle = {
     roundtrip: true,
     capacity: {
         count: null,
-        volume: 256,
-        weight: 51200,
+        volume: null,
+        weight: null,
     },
     costs: {
         per_event: 1000,
         per_hour: 10,
         per_km: 15,
-        per_kwh: 0.1,
+        per_kwh: null,
         per_site: 0.1,
         moved_load: null,
     },
@@ -1376,14 +1315,14 @@ export const VehicleRouteDefault: VehicleRoute = {
         roundtrip: true,
         capacity: {
             count: null,
-            volume: 256,
-            weight: 51200,
+            volume: null,
+            weight: null,
         },
         costs: {
             per_event: 1000,
             per_hour: 10,
             per_km: 15,
-            per_kwh: 0.1,
+            per_kwh: null,
             per_site: 0.1,
             moved_load: null,
         },
@@ -1439,7 +1378,7 @@ export const RouteOptimizationSolutionDefault: RouteOptimizationSolution = {
     depots: {},
     fleet: {},
     options: {
-        minimization_target: "cost",
+        quality: "normal",
         cost_matrix: null,
         internal: {
         },
@@ -1516,7 +1455,7 @@ export const ResponseDefault: Response = {
     depots: {},
     fleet: {},
     options: {
-        minimization_target: "cost",
+        quality: "normal",
         cost_matrix: null,
         internal: {
         },
