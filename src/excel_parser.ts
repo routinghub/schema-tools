@@ -244,6 +244,11 @@ function extendOptions(json: any): void
     let timeZone: string = json.options.timezone || 'UTC';
     let date: DateTime = parseDate(json.options.date, timeZone);
 
+    // timezone and date are only required for time window construction
+    // in ISO8601 format, and are not part of Routing API schema
+    delete json.options.timezone;
+    delete json.options.date;
+
     if (!date.isValid) {
         throw new Error(`Invalid date "${json.options.date}": ${date.invalidExplanation}`);
     }

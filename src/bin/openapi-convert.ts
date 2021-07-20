@@ -248,7 +248,7 @@ function getOptionsExampleData(schema: Field[]): ExampleData
         'date',
         'timezone',
         'quality',
-        'matrix'
+        'cost_matrix'
     ];
 
     const data = [
@@ -432,7 +432,7 @@ const OPTIONS_SCHEMA: JSONSchema4 = {
                 '- `normal` - (default) regular quality of optimization;\n' +
                 '- `high` - high quality of optimization (incurs additional cost and waiting time);\n'
         },
-        'matrix': {
+        'cost_matrix': {
             type: 'string',
             default: 'osrm',
             description:
@@ -1079,13 +1079,13 @@ function requestToExcel(outFileName: string)
             'date',
             'timezone',
             'quality',
-            'matrix'
+            'cost_matrix'
         ];
     
         const data = [
             [
                 '2020-12-01',
-                'Asia/Dubai',
+                'Europe/Berlin',
                 'normal',
                 'osrm'
             ]

@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { loadExcel } from "../excel_parser";
+import { loadExcel, ParseError, ParseResult } from "../excel_parser";
+import { Keys } from '../schema';
 
 const args = process.argv.slice(2);
 
@@ -19,7 +20,14 @@ const outJsonPath = args[1];
 const buffer = fs.readFileSync(excelTemplatePath).buffer;
 console.error(`Converting ${excelTemplatePath}, ${buffer.byteLength} bytes...`);
 
-loadExcel(buffer).then((result) => {
-    fs.writeFileSync(outJsonPath, JSON.stringify(result, undefined, 4));
-    console.error('Done.');
+loadExcel(buffer).then((result: ParseResult) => {
+    for (let key of Object.values(Keys)) {
+        if (result.errors[key] !== undefined && result.errors[key]!.length > 0) {
+            for (let error of result.errors[key]!) {
+                console.error(`Error processing key "${key}": ${error.message} at ${error.address}`)
+            }
+        }
+    }
+    fs.writeFileSync(outJsonPath, JSON.stringify(result.json, undefined, 4));
+    console.error(`Done, result written to ${outJsonPath}`);
 });
